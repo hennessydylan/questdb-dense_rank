@@ -2025,11 +2025,12 @@ public class WindowFunctionTest extends AbstractCairoTest {
                             "   sum(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   first_value(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   rank() over (partition by i order by j asc) " +
+                            "   dense_rank() over (partition by i order by j asc) " +
                             "from tab " +
                             "order by ts asc",
                     "SelectedRecord\n" +
                             "    CachedWindow\n" +
-                            "      orderedFunctions: [[j] => [rank() over (partition by [i])],[ts desc] => [avg(j) over (partition by [i] rows between unbounded preceding and current row )," +
+                            "      orderedFunctions:[[j] => [dense_rank() over (partition by [i])],[ts desc] => [[j] => [rank() over (partition by [i])],[ts desc] => [avg(j) over (partition by [i] rows between unbounded preceding and current row )," +
                             "sum(j) over (partition by [i] rows between unbounded preceding and current row ),first_value(j) over (partition by [i] rows between unbounded preceding and current row )]]\n" +
                             "      unorderedFunctions: [row_number() over (partition by [i])]\n" +
                             "        DataFrame\n" +
@@ -2038,19 +2039,20 @@ public class WindowFunctionTest extends AbstractCairoTest {
             );
 
             assertQuery(
-                    "row_number\tavg\tsum\tfirst_value\trank\n" +
-                            "1\t2.0\t6.0\t3.0\t1\n" +
-                            "2\t2.5\t5.0\t3.0\t2\n" +
-                            "3\t3.0\t3.0\t3.0\t3\n" +
-                            "1\t1.75\t7.0\t2.0\t4\n" +
-                            "2\t1.0\t3.0\t2.0\t1\n" +
-                            "3\t1.5\t3.0\t2.0\t2\n" +
-                            "4\t2.0\t2.0\t2.0\t3\n",
+                    "row_number\tavg\tsum\tfirst_value\trank\tdense_rank\n" +
+                            "1\t2.0\t6.0\t3.0\t1\t1\n" +
+                            "2\t2.5\t5.0\t3.0\t2\t2\n" +
+                            "3\t3.0\t3.0\t3.0\t3\t3\n" +
+                            "1\t1.75\t7.0\t2.0\t4\t4\n" +
+                            "2\t1.0\t3.0\t2.0\t1\t1\n" +
+                            "3\t1.5\t3.0\t2.0\t2\t2\n" +
+                            "4\t2.0\t2.0\t2.0\t3\t3\n",
                     "select row_number() over (partition by i order by ts asc), " +
                             "   avg(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   sum(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   first_value(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   rank() over (partition by i order by j asc) " +
+                            "   dense_rank() over (partition by i order by j asc) " +
                             "from tab " +
                             "order by ts asc",
                     null,
@@ -2059,19 +2061,20 @@ public class WindowFunctionTest extends AbstractCairoTest {
             );
 
             assertQuery(
-                    "row_number\tavg\tsum\tfirst_value\trank\n" +
-                            "4\t2.0\t2.0\t2.0\t3\n" +
-                            "3\t1.5\t3.0\t2.0\t2\n" +
-                            "2\t1.0\t3.0\t2.0\t1\n" +
-                            "1\t1.75\t7.0\t2.0\t4\n" +
-                            "3\t3.0\t3.0\t3.0\t3\n" +
-                            "2\t2.5\t5.0\t3.0\t2\n" +
-                            "1\t2.0\t6.0\t3.0\t1\n",
+                    "row_number\tavg\tsum\tfirst_value\trank\tdense_rank\n" +
+                            "4\t2.0\t2.0\t2.0\t3\t3\n" +
+                            "3\t1.5\t3.0\t2.0\t2\t2\n" +
+                            "2\t1.0\t3.0\t2.0\t1\t1\n" +
+                            "1\t1.75\t7.0\t2.0\t4\t4\n" +
+                            "3\t3.0\t3.0\t3.0\t3\t3\n" +
+                            "2\t2.5\t5.0\t3.0\t2\t2\n" +
+                            "1\t2.0\t6.0\t3.0\t1\t1\n",
                     "select row_number() over (partition by i order by ts asc), " +
                             "   avg(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   sum(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   first_value(j) over (partition by i order by ts desc rows between unbounded preceding and current row)," +
                             "   rank() over (partition by i order by j asc) " +
+                            "   dense_rank() over (partition by i order by j asc) " +
                             "from tab " +
                             "order by ts desc",
                     null,
@@ -2109,7 +2112,36 @@ public class WindowFunctionTest extends AbstractCairoTest {
                 false
         );
     }
-
+    
+    @Test
+    public void testDenseRankNoPartitionByNoOrderBy() throws Exception {
+        assertQuery(
+                "dense_rank\tprice\tsymbol\tts\n" +
+                        "1\t1\tBB\t1970-01-01T00:00:00.000000Z\n" +
+                        "1\t2\tCC\t1970-01-02T03:46:40.000000Z\n" +
+                        "1\t2\tAA\t1970-01-03T07:33:20.000000Z\n" +
+                        "1\t1\tCC\t1970-01-04T11:20:00.000000Z\n" +
+                        "1\t2\tBB\t1970-01-05T15:06:40.000000Z\n" +
+                        "1\t1\tBB\t1970-01-06T18:53:20.000000Z\n" +
+                        "1\t1\tBB\t1970-01-07T22:40:00.000000Z\n" +
+                        "1\t1\tCC\t1970-01-09T02:26:40.000000Z\n" +
+                        "1\t1\tCC\t1970-01-10T06:13:20.000000Z\n" +
+                        "1\t2\tAA\t1970-01-11T10:00:00.000000Z\n",
+                "select dense_rank() over (), * from trades",
+                "create table trades as " +
+                        "(" +
+                        "select" +
+                        " rnd_int(1,2,3) price," +
+                        " rnd_symbol('AA','BB','CC') symbol," +
+                        " timestamp_sequence(0, 100000000000) ts" +
+                        " from long_sequence(10)" +
+                        ") timestamp(ts) partition by day",
+                "ts",
+                true,
+                false
+        );
+    }
+    
     @Test
     public void testRankWithNoPartitionByAndOrderBySymbolWildcardLast() throws Exception {
         assertQuery(
@@ -2139,6 +2171,35 @@ public class WindowFunctionTest extends AbstractCairoTest {
         );
     }
 
+    @Test
+    public void testDenseRankNoPartitionByOrderBySymbol() throws Exception {
+        assertQuery(
+                "dense_rank\tprice\tsymbol\tts\n" +
+                        "2\t1\tBB\t1970-01-01T00:00:00.000000Z\n" +
+                        "3\t2\tCC\t1970-01-02T03:46:40.000000Z\n" +
+                        "1\t2\tAA\t1970-01-03T07:33:20.000000Z\n" +
+                        "3\t1\tCC\t1970-01-04T11:20:00.000000Z\n" +
+                        "2\t2\tBB\t1970-01-05T15:06:40.000000Z\n" +
+                        "2\t1\tBB\t1970-01-06T18:53:20.000000Z\n" +
+                        "2\t1\tBB\t1970-01-07T22:40:00.000000Z\n" +
+                        "3\t1\tCC\t1970-01-09T02:26:40.000000Z\n" +
+                        "3\t1\tCC\t1970-01-10T06:13:20.000000Z\n" +
+                        "1\t2\tAA\t1970-01-11T10:00:00.000000Z\n",
+                "select dense_rank() over (order by symbol), * from trades",
+                "create table trades as " +
+                        "(" +
+                        "select" +
+                        " rnd_int(1,2,3) price," +
+                        " rnd_symbol('AA','BB','CC') symbol," +
+                        " timestamp_sequence(0, 100000000000) ts" +
+                        " from long_sequence(10)" +
+                        ") timestamp(ts) partition by day",
+                "ts",
+                true,
+                false
+        );
+    }
+    
     @Test
     public void testRankWithPartitionAndOrderByNonSymbol() throws Exception {
         assertQuery(

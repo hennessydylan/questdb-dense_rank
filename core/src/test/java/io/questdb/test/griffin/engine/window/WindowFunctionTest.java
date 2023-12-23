@@ -2199,7 +2199,7 @@ public class WindowFunctionTest extends AbstractCairoTest {
                 false
         );
     }
-    
+  
     @Test
     public void testRankWithPartitionAndOrderByNonSymbol() throws Exception {
         assertQuery(
@@ -2229,6 +2229,34 @@ public class WindowFunctionTest extends AbstractCairoTest {
         );
     }
 
+  
+    @Test
+    public void testDenseRankOrderByTimeStamp() throws Exception {
+        assertQuery( 
+                "dense_rank\tts\n" +
+                        "1\t1970-01-01T00:00:00.000000Z\n" +
+                        "2\t1970-01-02T03:46:40.000000Z\n" +
+                        "3\t1970-01-03T07:33:20.000000Z\n" +
+                        "4\t1970-01-04T11:20:00.000000Z\n" +
+                        "5\t1970-01-05T15:06:40.000000Z\n" +
+                        "6\t1970-01-06T18:53:20.000000Z\n" +
+                        "7\t1970-01-07T22:40:00.000000Z\n" +
+                        "8\t1970-01-09T02:26:40.000000Z\n" +
+                        "9\t1970-01-10T06:13:20.000000Z\n" +
+                        "10\t1970-01-11T10:00:00.000000Z\n",
+                "select dense_rank() over (order by ts),ts from trades",
+                "create table trades as " +
+                        "(" +
+                        "select" +
+                        " timestamp_sequence(0, 100000000000) ts" +
+                        " from long_sequence(10)" +
+                        ") timestamp(ts) partition by day",
+                "ts",
+                false,
+                true
+        );
+    }
+    
     @Test
     public void testRankWithPartitionAndOrderBySymbolNoWildcard() throws Exception {
         assertQuery(
@@ -2244,6 +2272,35 @@ public class WindowFunctionTest extends AbstractCairoTest {
                         "1\n" +
                         "1\n",
                 "select rank() over (partition by symbol order by symbol) from trades",
+                "create table trades as " +
+                        "(" +
+                        "select" +
+                        " rnd_double(42) price," +
+                        " rnd_symbol('AA','BB','CC') symbol," +
+                        " timestamp_sequence(0, 100000000000) ts" +
+                        " from long_sequence(10)" +
+                        ") timestamp(ts) partition by day",
+                null,
+                true,
+                false
+        );
+    }
+
+    @Test
+    public void testDenseRankPartitionOrderBySymbol() throws Exception {
+        assertQuery(
+                "dense_rank\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n" +
+                        "1\n",
+                "select dense_rank() over (partition by symbol order by symbol) from trades",
                 "create table trades as " +
                         "(" +
                         "select" +
@@ -2288,6 +2345,36 @@ public class WindowFunctionTest extends AbstractCairoTest {
     }
 
     @Test
+    public void testDenseRankPartitionAndOrderBySymbol() throws Exception {
+        assertQuery(
+                "price\tsymbol\tts\tdense_rank\n" +
+                        "0.8043224099968393\tCC\t1970-01-01T00:00:00.000000Z\t1\n" +
+                        "0.2845577791213847\tBB\t1970-01-02T03:46:40.000000Z\t1\n" +
+                        "0.9344604857394011\tCC\t1970-01-03T07:33:20.000000Z\t1\n" +
+                        "0.7905675319675964\tAA\t1970-01-04T11:20:00.000000Z\t1\n" +
+                        "0.8899286912289663\tBB\t1970-01-05T15:06:40.000000Z\t1\n" +
+                        "0.11427984775756228\tCC\t1970-01-06T18:53:20.000000Z\t1\n" +
+                        "0.4217768841969397\tBB\t1970-01-07T22:40:00.000000Z\t1\n" +
+                        "0.7261136209823622\tBB\t1970-01-09T02:26:40.000000Z\t1\n" +
+                        "0.6693837147631712\tBB\t1970-01-10T06:13:20.000000Z\t1\n" +
+                        "0.8756771741121929\tBB\t1970-01-11T10:00:00.000000Z\t1\n",
+                "select *, dense_rank() over (partition by symbol order by symbol) from trades",
+                "create table trades as " +
+                        "(" +
+                        "select" +
+                        " rnd_double(42) price," +
+                        " rnd_symbol('AA','BB','CC') symbol," +
+                        " timestamp_sequence(0, 100000000000) ts" +
+                        " from long_sequence(10)" +
+                        ") timestamp(ts) partition by day",
+                "ts",
+                true,
+                false
+        );
+    }
+
+  
+    @Test
     public void testRankWithPartitionAndOrderBySymbolWildcardLast() throws Exception {
         assertQuery(
                 "rank\tprice\tsymbol\tts\n" +
@@ -2315,7 +2402,36 @@ public class WindowFunctionTest extends AbstractCairoTest {
                 false
         );
     }
-
+  
+    @Test
+    public void testDenseRankPartitionAndOrderBySymbolWildcard() throws Exception {
+        assertQuery(
+                "dense_rank\tprice\tsymbol\tts\n" +
+                        "1\t0.8043224099968393\tCC\t1970-01-01T00:00:00.000000Z\n" +
+                        "1\t0.2845577791213847\tBB\t1970-01-02T03:46:40.000000Z\n" +
+                        "1\t0.9344604857394011\tCC\t1970-01-03T07:33:20.000000Z\n" +
+                        "1\t0.7905675319675964\tAA\t1970-01-04T11:20:00.000000Z\n" +
+                        "1\t0.8899286912289663\tBB\t1970-01-05T15:06:40.000000Z\n" +
+                        "1\t0.11427984775756228\tCC\t1970-01-06T18:53:20.000000Z\n" +
+                        "1\t0.4217768841969397\tBB\t1970-01-07T22:40:00.000000Z\n" +
+                        "1\t0.7261136209823622\tBB\t1970-01-09T02:26:40.000000Z\n" +
+                        "1\t0.6693837147631712\tBB\t1970-01-10T06:13:20.000000Z\n" +
+                        "1\t0.8756771741121929\tBB\t1970-01-11T10:00:00.000000Z\n",
+                "select dense_rank() over (partition by symbol order by symbol), * from trades",
+                "create table trades as " +
+                        "(" +
+                        "select" +
+                        " rnd_double(42) price," +
+                        " rnd_symbol('AA','BB','CC') symbol," +
+                        " timestamp_sequence(0, 100000000000) ts" +
+                        " from long_sequence(10)" +
+                        ") timestamp(ts) partition by day",
+                "ts",
+                true,
+                false
+        );
+    }
+  
     @Test
     public void testRankWithPartitionBySymbolAndMultiOrderWildcardLast() throws Exception {
         assertQuery(
@@ -2345,6 +2461,36 @@ public class WindowFunctionTest extends AbstractCairoTest {
         );
     }
 
+    @Test
+    public void testDenseRankPartitionBySymbolOrderBySymbolIntegerPrice() throws Exception {
+        assertQuery(
+                "dense_rank\tprice\tsymbol\tts\n" +
+                        "1\t1\tBB\t1970-01-01T00:00:00.000000Z\n" +
+                        "2\t2\tCC\t1970-01-02T03:46:40.000000Z\n" +
+                        "1\t2\tAA\t1970-01-03T07:33:20.000000Z\n" +
+                        "1\t1\tCC\t1970-01-04T11:20:00.000000Z\n" +
+                        "2\t2\tBB\t1970-01-05T15:06:40.000000Z\n" +
+                        "1\t1\tBB\t1970-01-06T18:53:20.000000Z\n" +
+                        "1\t1\tBB\t1970-01-07T22:40:00.000000Z\n" +
+                        "1\t1\tCC\t1970-01-09T02:26:40.000000Z\n" +
+                        "1\t1\tCC\t1970-01-10T06:13:20.000000Z\n" +
+                        "1\t2\tAA\t1970-01-11T10:00:00.000000Z\n",
+                "select dense_rank() over (partition by symbol order by symbol, price), * from trades",
+                "create table trades as " +
+                        "(" +
+                        "select" +
+                        " rnd_int(1,2,3) price," +
+                        " rnd_symbol('AA','BB','CC') symbol," +
+                        " timestamp_sequence(0, 100000000000) ts" +
+                        " from long_sequence(10)" +
+                        ") timestamp(ts) partition by day",
+                "ts",
+                true,
+                false
+        );
+    }
+
+  
     @Test
     public void testRankWithPartitionBySymbolAndNoOrderWildcardLast() throws Exception {
         assertQuery(
